@@ -33,6 +33,7 @@
 
 #include "hid_defs.h"
 #include "misc_defs.h"
+#include "ptp_defs.h"
 
 #include "hid.h"
 #include "dfu.h"
@@ -202,6 +203,47 @@ static const struct usb_interface_descriptor hid_iface = {
     .extralen = sizeof(hid_function),
 };
 
+static const struct usb_endpoint_descriptor mtp_endpoints[] = {
+    {
+        .bLength = USB_DT_ENDPOINT_SIZE,
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = ENDP_MTP_DATA_IN,
+        .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+        .wMaxPacketSize = USB_MTP_MAX_PACKET_SIZE,
+        .bInterval = 0,
+    },
+    {
+        .bLength = USB_DT_ENDPOINT_SIZE,
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = ENDP_MTP_DATA_OUT,
+        .bmAttributes = USB_ENDPOINT_ATTR_BULK,
+        .wMaxPacketSize = USB_MTP_MAX_PACKET_SIZE,
+        .bInterval = 0,
+    },
+    {
+        .bLength = USB_DT_ENDPOINT_SIZE,
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = ENDP_MTP_EVENT_IN,
+        .bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
+        .wMaxPacketSize = USB_MTP_MAX_PACKET_SIZE,
+        .bInterval = 10,
+    },
+};
+
+static const struct usb_interface_descriptor mtp_iface = {
+    .bLength = USB_DT_INTERFACE_SIZE,
+    .bDescriptorType = USB_DT_INTERFACE,
+    .bInterfaceNumber = INTF_MTP,
+    .bAlternateSetting = 0,
+    .bNumEndpoints = 3,
+    .bInterfaceClass = USB_CLASS_IMAGE,
+    .bInterfaceSubClass = USB_IMAGE_SUBCLASS_STILL_IMAGING,
+    .bInterfaceProtocol = 0,
+    .iInterface = 5,
+
+    .endpoint = mtp_endpoints,
+};
+
 static const struct usb_interface_descriptor dfu_iface = {
     .bLength = USB_DT_INTERFACE_SIZE,
     .bDescriptorType = USB_DT_INTERFACE,
@@ -235,6 +277,11 @@ static const struct usb_interface interfaces[] = {
     {
         .num_altsetting = 1,
         .altsetting = &data_iface,
+    },
+    /* MTP Interface */
+    {
+        .num_altsetting = 1,
+        .altsetting = &mtp_iface,
     },
     /* DFU interface */
     {

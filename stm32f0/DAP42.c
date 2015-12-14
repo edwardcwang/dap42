@@ -209,6 +209,15 @@ static bool on_get_line_coding(struct usb_cdc_line_coding* line_coding) {
     return true;
 }
 
+static void on_mtp_recv(uint8_t* data, uint16_t len) {
+    usb_timer = 1000;
+}
+
+static void on_mtp_send(uint8_t*data, uint16_t *len) {
+    usb_timer = 1000;
+    *len = 0;
+}
+
 static bool do_reset_to_dfu = false;
 static void on_dfu_request(void) {
     do_reset_to_dfu = true;
@@ -239,6 +248,7 @@ int main(void) {
     DAP_app_setup(usbd_dev, &on_dfu_request);
     cdc_setup(usbd_dev, &on_host_rx, &on_host_tx,
               NULL, &on_set_line_coding, &on_get_line_coding);
+    mtp_setup(usbd_dev, &on_mtp_recv, &on_mtp_send);
     dfu_setup(usbd_dev, &on_dfu_request);
 
     uint16_t cdc_len = 0;
