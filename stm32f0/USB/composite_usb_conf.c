@@ -239,7 +239,7 @@ static const struct usb_interface_descriptor mtp_iface = {
     .bInterfaceClass = USB_CLASS_IMAGE,
     .bInterfaceSubClass = USB_IMAGE_SUBCLASS_STILL_IMAGING,
     .bInterfaceProtocol = 0,
-    .iInterface = 5,
+    .iInterface = 8,
 
     .endpoint = mtp_endpoints,
 };
@@ -313,10 +313,11 @@ static const char *usb_strings[] = {
     "CDC Control",
     "CDC Data",
     "DAP42 DFU",
+    "MTP",
 };
 
 /* Buffer to be used for control requests. */
-static uint8_t usbd_control_buffer[128] __attribute__ ((aligned (2)));
+static uint8_t usbd_control_buffer[256] __attribute__ ((aligned (2)));
 
 void cmp_set_usb_serial_number(const char* serial) {
     serial_number[0] = '\0';
