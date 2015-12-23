@@ -114,6 +114,8 @@ static void cdc_bulk_data_out(usbd_device *usbd_dev, uint8_t ep) {
     }
 }
 
+static bool connected = false;
+
 static void cdc_set_config(usbd_device *usbd_dev, uint16_t wValue) {
     (void)wValue;
 
@@ -124,6 +126,8 @@ static void cdc_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 
     cmp_usb_register_control_class_callback(INTF_CDC_DATA, cdc_control_class_request);
     cmp_usb_register_control_class_callback(INTF_CDC_COMM, cdc_control_class_request);
+
+    connected = true;
 }
 
 static usbd_device* cdc_usbd_dev;
@@ -149,4 +153,63 @@ bool cdc_send_data(const uint8_t* data, size_t len) {
                                          (const void*)data,
                                          (uint16_t)len);
     return (sent != 0);
+}
+
+static uint8_t tx_buffer[USB_CDC_MAX_PACKET_SIZE];
+static uint8_t tx_buffer_count;
+
+uint8_t cdc_send_buffered(const uint8_t* data, size_t len) {
+    uint8_t sent = 0;
+    if (data) {
+        while ((tx_buffer_count < sizeof(tx_buffer)) && (sent < len)) {
+            tx_buffer[tx_buffer_count++] = data[sent++];
+        }
+    }
+
+    return sent;
+}
+
+uint8_t cdc_puts(const char* str) {
+    uint8_t sent = 0;
+    if (str) {
+        while (str[sent] != '\0' && (tx_buffer_count < sizeof(tx_buffer))) {
+            tx_buffer[tx_buffer_count++] = str[sent++];
+        }
+    }
+
+    return sent;
+}
+
+bool cdc_putchar(char c) {
+    if (tx_buffer_count < sizeof(tx_buffer)) {
+        tx_buffer[tx_buffer_count++] = c;
+        return true;
+    }
+    return false;
+}
+
+bool cdc_update(void) {
+    static bool need_zlp = false;
+
+    if (!connected) {
+        return false;
+    }
+
+    bool active = false;
+    if (tx_buffer_count > 0 && cdc_send_data(tx_buffer, tx_buffer_count)) {
+        if (tx_buffer_count == USB_CDC_MAX_PACKET_SIZE) {
+            need_zlp = true;
+        } else {
+            need_zlp = false;
+        }
+        tx_buffer_count = 0;
+        active = true;
+    } else if (tx_buffer_count == 0 && need_zlp) {
+        // Currently can't tell if sending succeeded.
+        cdc_send_data(NULL, 0);
+        need_zlp = false;
+        active = true;
+    }
+
+    return active;
 }

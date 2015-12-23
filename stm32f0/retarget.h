@@ -21,7 +21,8 @@
 
 #include <unistd.h>
 
-#define NO_USART 0xFFFFFFFFU
+#define NO_USART   0xFFFFFFFFU
+#define USB_SERIAL 0xFFFFFFF0U
 
 extern void retarget(int file, uint32_t usart);
 extern int _write(int file, char *ptr, int len);

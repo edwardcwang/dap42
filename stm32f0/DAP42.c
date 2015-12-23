@@ -143,12 +143,25 @@ static uint32_t usb_timer = 0;
 
 static void on_host_tx(uint8_t* data, uint16_t len) {
     usb_timer = 1000;
-    console_send_buffered(data, (size_t)len);
+
+    uint16_t i;
+    for (i=0; i < len; i++) {
+        char c = (char)(data[0]);
+        if (c >= 'a' && c <= 'z') {
+            cdc_putchar(c - ('a' - 'A'));
+        } else if (c >= 'A' && c <= 'Z') {
+            cdc_putchar(c + ('a' - 'A'));
+        } else if (c == '\r') {
+            cdc_putchar('\r');
+            cdc_putchar('\n');
+        }
+    }
 }
 
 static void on_host_rx(uint8_t* data, uint16_t* len) {
     usb_timer = 1000;
-    *len = (uint16_t)console_recv_buffered(data, USB_CDC_MAX_PACKET_SIZE);
+    *len = 0;
+    //*len = (uint16_t)console_recv_buffered(data, USB_CDC_MAX_PACKET_SIZE);
 }
 
 static struct usb_cdc_line_coding current_line_coding = {
@@ -234,8 +247,8 @@ int main(void) {
     led_num(0);
 
     console_setup(DEFAULT_BAUDRATE);
-    retarget(STDOUT_FILENO, CONSOLE_USART);
-    retarget(STDERR_FILENO, CONSOLE_USART);
+    retarget(STDOUT_FILENO, USB_SERIAL);
+    retarget(STDERR_FILENO, USB_SERIAL);
 
     led_num(1);
 
@@ -252,9 +265,6 @@ int main(void) {
     mtp_setup(usbd_dev, &on_mtp_recv, &on_mtp_send);
     dfu_setup(usbd_dev, &on_dfu_request);
 
-    uint16_t cdc_len = 0;
-    uint8_t cdc_buf[USB_CDC_MAX_PACKET_SIZE];
-
     tick_start();
 
 
@@ -267,17 +277,10 @@ int main(void) {
         usbd_poll(usbd_dev);
 
         // Handle CDC
-        if (cdc_len > 0) {
-            if (cdc_send_data(cdc_buf, cdc_len)) {
-                usb_timer = 1000;
-                cdc_len = 0;
-            }
+        bool cdc_active = cdc_update();
+        if (cdc_active) {
+            usb_timer = 1000;
         }
-
-        if (cdc_len == 0) {
-            cdc_len = (uint16_t)console_recv_buffered(cdc_buf, USB_CDC_MAX_PACKET_SIZE);
-        }
-
 
         // Handle DAP
         bool dap_active = DAP_app_update();

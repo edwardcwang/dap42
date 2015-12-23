@@ -36,5 +36,9 @@ extern void cdc_setup(usbd_device* usbd_dev,
                       GetLineCodingFunction get_line_coding_cb);
 
 extern bool cdc_send_data(const uint8_t* data, size_t len);
+extern uint8_t cdc_send_buffered(const uint8_t* data, size_t len);
+extern uint8_t cdc_puts(const char* str);
+extern bool cdc_putchar(char c);
+extern bool cdc_update(void);
 
 #endif
