@@ -27,6 +27,7 @@
 
 #include "USB/composite_usb_conf.h"
 #include "USB/cdc.h"
+#include "USB/mtp.h"
 #include "USB/dfu.h"
 
 #include "DAP/app.h"

@@ -16,7 +16,9 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <libopencm3/stm32/st_usbfs.h>
+#include <stdlib.h>
+
+#include <libopencm3/usb/usbd.h>
 
 #include "composite_usb_conf.h"
 #include "mtp.h"
@@ -95,11 +97,7 @@ static void mtp_set_config(usbd_device *usbd_dev, uint16_t wValue) {
                   &mtp_bulk_data_in);
     usbd_ep_setup(usbd_dev, ENDP_MTP_EVENT_IN, USB_ENDPOINT_ATTR_INTERRUPT, 64, NULL);
 
-    usbd_register_control_callback(
-        usbd_dev,
-        USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
-        USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
-        mtp_control_class_request);
+    cmp_usb_register_control_class_callback(INTF_MTP, mtp_control_class_request);
 }
 
 void mtp_setup(usbd_device* usbd_dev,
@@ -109,7 +107,7 @@ void mtp_setup(usbd_device* usbd_dev,
     mtp_recv_callback = mtp_recv_cb;
     mtp_send_callback = mtp_send_cb;
 
-    usbd_register_set_config_callback(usbd_dev, mtp_set_config);
+    cmp_usb_register_set_config_callback(mtp_set_config);
 }
 
 bool mtp_send_event(struct usb_ptp_async_event* event) {
