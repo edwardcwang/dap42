@@ -238,7 +238,7 @@ static const struct usb_interface_descriptor mtp_iface = {
     .bNumEndpoints = 3,
     .bInterfaceClass = USB_CLASS_IMAGE,
     .bInterfaceSubClass = USB_IMAGE_SUBCLASS_STILL_IMAGING,
-    .bInterfaceProtocol = 0,
+    .bInterfaceProtocol = USB_IMAGE_PROTOCOL_BULK_ONLY,
     .iInterface = 8,
 
     .endpoint = mtp_endpoints,
