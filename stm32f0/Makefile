@@ -22,14 +22,25 @@ DFU_UTIL = dfu-util
 DFUSE_VID_PID := 0483:df11
 DAP42_VID_PID := 1209:da42
 
+DATASET_GEN := ../util/generate_mtp.py
+
+YMLS = $(wildcard USB/*.yaml)
+AUTO_SRCS = $(YMLS:.yaml=.c)
+AUTO_SRCS += $(YMLS:.yaml=.h)
+
 SRCS := $(wildcard *.c)
 SRCS += $(wildcard DAP/*.c)
 SRCS += $(wildcard USB/*.c)
+SRCS += $(YMLS:.yaml=.o)
 SRCS += $(wildcard DFU/*.c)
 OBJS += $(SRCS:.c=.o)
 DEPS  = $(SRCS:.c=.d)
 
 .DEFAULT_GOAL := $(BINARY).bin
+
+%.h %.c: %.yaml
+	$(DATASET_GEN) --mode=header $(<) $(*).h
+	$(DATASET_GEN) --mode=definition $(<) $(*).c
 
 %.dfuse-flash: %.bin
 	$(DFU_UTIL) -d $(DAP42_VID_PID),$(DFUSE_VID_PID) -a 0 -s 0x08000000:leave -D $(<)
@@ -39,6 +50,7 @@ dfuse-flash: $(BINARY).dfuse-flash
 clean::
 	@rm -f $(OBJS)
 	@rm -f $(DEPS)
+	@rm -f $(AUTO_SRCS)
 
 include libopencm3.target.mk
 

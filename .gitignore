@@ -11,3 +11,6 @@ GTAGS
 *.elf
 *.axf
 *.map
+
+# ignore python bytecode
+*.pyc

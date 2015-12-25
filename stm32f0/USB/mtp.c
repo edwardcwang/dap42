@@ -23,6 +23,7 @@
 
 #include "composite_usb_conf.h"
 #include "mtp.h"
+#include "mtp_datasets.h"
 
 enum MTPState {
     RESET, IDLE, COMMAND, DATA_IN, DATA_OUT, RESPONSE, STALLED
@@ -30,6 +31,10 @@ enum MTPState {
 
 static enum MTPState mtp_state = RESET;
 static usbd_device* mtp_usbd_dev = NULL;
+static bool mtp_enabled = false;
+static uint8_t mtp_data_buffer[256] __attribute__ ((aligned (4)));
+static size_t mtp_data_buffer_count;
+static size_t mtp_data_buffer_offset;
 
 /* User Callbacks */
 /*
@@ -65,7 +70,13 @@ static size_t mtp_stream_data_in(const struct usb_ptp_command_block* command,
     (void)response;
     (void)buffer;
     (void)len;
-    return 0;
+    size_t bytes_to_move = mtp_data_buffer_count - mtp_data_buffer_offset;
+    if (bytes_to_move > len) {
+        bytes_to_move = len;
+    }
+    memcpy(buffer, &mtp_data_buffer[mtp_data_buffer_offset], bytes_to_move);
+    mtp_data_buffer_offset += bytes_to_move;
+    return bytes_to_move;
 }
 
 static bool mtp_stream_data_complete(const struct usb_ptp_command_block* command,
@@ -83,30 +94,52 @@ static CommandConfig mtp_handle_command(struct usb_ptp_command_block* command,
     config.has_data_stage = false;
     config.data_stage_out = false;
     switch (command->code) {
-        case OPR_GetDeviceInfo:
+        case OPR_GetDeviceInfo: {
             response->code = RSP_Parameter_Not_Supported;
             config.has_data_stage = true;
-            config.data_length = 0;
+            config.data_length = sizeof(mtp_device_info);
+            mtp_data_buffer_offset = 0;
+            mtp_data_buffer_count = sizeof(mtp_device_info);
+            memcpy(mtp_data_buffer, mtp_device_info, sizeof(mtp_device_info));
             break;
-        case OPR_OpenSession:
+        }
+        case OPR_OpenSession: {
             response->code = RSP_OK;
             break;
-        case OPR_CloseSession:
+        }
+        case OPR_CloseSession: {
             response->code = RSP_OK;
             break;
-        case OPR_GetStorageIDs:
+        }
+        case OPR_GetStorageIDs: {
             response->code = RSP_OK;
             config.has_data_stage = true;
-            config.data_length = 0;
+            config.data_length = 8;
+            struct storage_id_array {
+                uint32_t count;
+                uint32_t ids[0];
+            };
+
+            struct storage_id_array* arr = (struct storage_id_array*)(mtp_data_buffer);
+            arr->count = 1;
+            arr->ids[0] = 0x00010001U;
+            mtp_data_buffer_count = 8;
+            mtp_data_buffer_offset = 0;
             break;
-        case OPR_GetStorageInfo:
+        }
+        case OPR_GetStorageInfo: {
             response->code = RSP_OK;
             config.has_data_stage = true;
-            config.data_length = 0;
+            config.data_length = sizeof(mtp_test_store_info);
+            memcpy(mtp_data_buffer, mtp_test_store_info, sizeof(mtp_test_store_info));
+            mtp_data_buffer_count = sizeof(mtp_test_store_info);
+            mtp_data_buffer_offset = 0;
             break;
-        default:
+        }
+        default: {
             response->code = RSP_Operation_Not_Supported;
             break;
+        }
     }
 
     return config;
@@ -190,6 +223,8 @@ static void mtp_set_config(usbd_device *usbd_dev, uint16_t wValue) {
     usbd_ep_setup(usbd_dev, ENDP_MTP_EVENT_IN, USB_ENDPOINT_ATTR_INTERRUPT, 64, NULL);
 
     cmp_usb_register_control_class_callback(INTF_MTP, mtp_control_class_request);
+
+    mtp_enabled = true;
 }
 
 void mtp_setup(usbd_device* usbd_dev) {
@@ -224,6 +259,10 @@ bool mtp_update(void) {
     bool active = false;
     
     static enum MTPState old_state = RESET;
+
+    if (!mtp_enabled) {
+        return false;
+    }
     
     while (1) {
         if (mtp_state == RESET) {
