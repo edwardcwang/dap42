@@ -262,7 +262,7 @@ int main(void) {
     DAP_app_setup(usbd_dev, &on_dfu_request);
     cdc_setup(usbd_dev, &on_host_rx, &on_host_tx,
               NULL, &on_set_line_coding, &on_get_line_coding);
-    mtp_setup(usbd_dev, &on_mtp_recv, &on_mtp_send);
+    mtp_setup(usbd_dev);
     dfu_setup(usbd_dev, &on_dfu_request);
 
     tick_start();
