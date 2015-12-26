@@ -42,6 +42,8 @@ DEPS  = $(SRCS:.c=.d)
 	$(DATASET_GEN) --mode=header $(<) $(*).h
 	$(DATASET_GEN) --mode=definition $(<) $(*).c
 
+datasets: $(AUTO_SRCS)
+
 %.dfuse-flash: %.bin
 	$(DFU_UTIL) -d $(DAP42_VID_PID),$(DFUSE_VID_PID) -a 0 -s 0x08000000:leave -D $(<)
 
@@ -50,7 +52,8 @@ dfuse-flash: $(BINARY).dfuse-flash
 clean::
 	@rm -f $(OBJS)
 	@rm -f $(DEPS)
-	@rm -f $(AUTO_SRCS)
+
+.phony: datasets dfuse-flash
 
 include libopencm3.target.mk
 
