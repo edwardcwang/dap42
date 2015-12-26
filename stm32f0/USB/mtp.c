@@ -95,7 +95,7 @@ static CommandConfig mtp_handle_command(struct usb_ptp_command_block* command,
     config.data_stage_out = false;
     switch (command->code) {
         case OPR_GetDeviceInfo: {
-            response->code = RSP_Parameter_Not_Supported;
+            response->code = RSP_OK;
             config.has_data_stage = true;
             config.data_length = sizeof(mtp_device_info);
             mtp_data_buffer_offset = 0;
@@ -346,9 +346,13 @@ bool mtp_update(void) {
                 mtp_state = RESPONSE;
             } else if (mtp_stream_data_ready(&txn.command.header)) {
                 if (txn.buffer_len == 0) {
+                    size_t bytes_to_move = txn.data.header.length - txn.data_bytes_transferred;
+                    if (bytes_to_move > sizeof(txn.buffer)) {
+                        bytes_to_move = sizeof(txn.buffer);
+                    }
                     txn.buffer_len = mtp_stream_data_in(&txn.command.header,
                                                         &txn.response.header,
-                                                        txn.buffer, sizeof(txn.buffer));
+                                                        txn.buffer, bytes_to_move);
                 }
 
                 if (txn.buffer_len > 0) {
